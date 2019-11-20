@@ -1,17 +1,20 @@
 package it.thadumi.workshop.vavr;
 
-import io.vavr.CheckedFunction1;
-import io.vavr.CheckedFunction3;
-import io.vavr.Function1;
-import io.vavr.PartialFunction;
+import io.vavr.*;
 import io.vavr.collection.CharSeq;
+import io.vavr.collection.List;
 import io.vavr.collection.Seq;
+import io.vavr.collection.Stream;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
+import io.vavr.control.Try;
 import io.vavr.control.Validation;
 import io.vavr.test.Arbitrary;
 import io.vavr.test.Property;
 
 import org.junit.Test;
+
+import java.util.Optional;
 import java.util.Random;
 
 import static io.vavr.API.*;
@@ -50,7 +53,7 @@ public class VavrWorkshop {
      *      ### curring
      *      ### memoization
      *      ### composition
-     *      ### partial functions to total functions
+     *      ### partial functions vs total functions
      *  ## Suppliers vs Laziness
      *  ## Tuples
      *  ## Persistent data structures
@@ -68,27 +71,88 @@ public class VavrWorkshop {
 
 
 
+    public void functions() {
+        Function2<Integer, Integer, Integer> f2 = (i, j) -> i+j;
+
+        Function1<Integer, Function1<Integer, Integer>> curried = f2.curried();
+
+        Function1<Integer, Integer> add1 = curried.apply(1);
+        add1.apply(12);
+
+        Function1<Integer, Integer> add2 = curried.apply(2);
+
+        Function1<Integer, Integer> memoized = add2.memoized();
+    }
+
+    @Test
+    public void function2() {
+        Function1<String, Integer> size = s -> {
+            System.out.println("ciao");
+            return s.length();
+        };
+
+        Function1<String, Integer> memoized = size.memoized();
+
+        memoized.apply("t");
+        memoized.apply("t");
+
+        Function1<Integer, Boolean> f1 = i -> i%2 == 0;
+        Function1<Integer, Integer> compose = size.compose((Integer i) -> "");
+        Function1<String, Boolean> stringBooleanFunction1 = size.andThen(i -> i % 2 == 0);
+
+    }
+
+    @Test
+    public void partial_functions_and_total() {
+        Function2<Integer, Integer, Integer> f2 = (i,j) -> i/j;
+
+        Function1<Integer, Function1<Integer, Integer>> curried = f2.curried();
+        PartialFunction<Integer, Function1<Integer, Integer>> partial = curried.partial(i -> i != 0);
+
+        Function1<Integer, Option<Function1<Integer, Integer>>> lift = partial.lift();
+    }
+
+    @Test
+    public void option() {
+        Option<String> o = Option.of(10).map(i -> "");
+        Option<Option<Object>> map = Option.of(10).map(i -> Option.none());
+        Option<Object> m = Option.of(10).flatMap(i -> Option.none());
+
+        List<Option<Integer>> of = List.of(Option.none(), Option.some(1), Option.none());
+
+        List<Integer> map1 = of.filter(Option::isDefined).map(Option::get);
+        List<Integer> integers = of.flatMap(Function1.identity());
 
 
+        Try<String> strings = o.toTry();
+        strings.onFailure(eror-> System.out.println("ops"))
+                .onSuccess(string -> System.out.println("yeee"))
+                .andFinally(() -> System.out.println("try done"));
 
+        Either<Throwable, String> strings2 = strings.toEither();
+        strings2.map(s -> s.length())
+                .mapLeft(t -> t.getMessage());
 
+        // here I lose the information about the throwable!!!
+        Option<String> strings1 = strings.toOption();
+    }
 
+    @Test
+    public void stream() {
 
+        Stream<Integer> s = Stream.iterate(0, i -> i+1);
+        Stream<Integer> drop = s.drop(5);
+        System.out.println(s);
+        System.out.println(drop);
 
+        // the square root of the odd numbers < 100
+        s.filter(i -> i % 2 == 0)
+         .map(Math::sqrt)
+         .takeWhile(i -> i < 100)
+         .forEach(System.out::println);
 
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-    @SuppressWarnings("GrazieInspection")
     @Test
     public void patter_matching() {
         int i = 1;
@@ -107,9 +171,14 @@ public class VavrWorkshop {
         System.out.println(plusOne);
 
         String value = Match(Option.none()).of(
-                Case($Some($()), "defined"),
+                Case($Some($(1)), "uno"),
+                Case($Some($()), "default"),
                 Case($None(), "empty")
         );
+
+        Tuple2<Integer, Integer> tuple = Tuple(1, 2);
+
+
         System.out.println(value);
 
         // patter matching for checking arguments

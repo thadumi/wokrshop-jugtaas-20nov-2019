@@ -66,11 +66,7 @@ public class VavrWorkshop {
      *      ### Pattern Matching
      *      ### Validators
      */
-
-
-
-
-
+    @Test
     public void functions() {
         Function2<Integer, Integer, Integer> f2 = (i, j) -> i+j;
 
@@ -80,8 +76,6 @@ public class VavrWorkshop {
         add1.apply(12);
 
         Function1<Integer, Integer> add2 = curried.apply(2);
-
-        Function1<Integer, Integer> memoized = add2.memoized();
     }
 
     @Test
@@ -93,7 +87,9 @@ public class VavrWorkshop {
 
         Function1<String, Integer> memoized = size.memoized();
 
+        // first call => will compute the function size
         memoized.apply("t");
+        // size for "t" already computed therefore will return from the "cache" the output
         memoized.apply("t");
 
         Function1<Integer, Boolean> f1 = i -> i%2 == 0;
